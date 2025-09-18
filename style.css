@@ -1,0 +1,183 @@
+/* ===== base vars ===== */
+:root{
+  --bg:#0b1220; --fg:#e7eefb; --muted:#9bb3cf;
+  --glass:rgba(255,255,255,.06); --glass-strong:rgba(255,255,255,.12);
+  --sky-top:#0c1326; --sky-bot:#0a0f1c;
+  --star-fill:rgba(168,216,255,.9); --star-halo:rgba(168,216,255,.15);
+  --accent:#6ac1ff; --accent-2:#8fffde; --danger:#ff6a7a;
+}
+:root[data-theme="light"]{
+  --bg:#eef3fb; --fg:#0f172a; --muted:#5f6f86;
+  --glass:rgba(255,255,255,.6); --glass-strong:rgba(255,255,255,.8);
+  --sky-top:#cfe3ff; --sky-bot:#e6eefb;
+  --star-fill:rgba(80,120,160,.8); --star-halo:rgba(80,120,160,.15);
+  --accent:#2563eb; --accent-2:#10b981;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:15px/1.35 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+.hidden{display:none!important}
+.text-muted,.muted{color:var(--muted)}
+
+/* ===== tabs: essencial ===== */
+.tab{display:none}
+.tab.active{display:block}
+
+/* ===== canvas / efeito tema ===== */
+#stars{position:fixed; inset:0; z-index:-1}
+.theme-fx{pointer-events:none; position:fixed; inset:0; opacity:0; background:radial-gradient(1200px 1200px at 50% 50%, rgba(255,255,255,.6), transparent); transition:opacity .28s}
+.theme-fx.on{opacity:1}
+
+/* ===== glass ===== */
+.glass{background:var(--glass); backdrop-filter: blur(12px); border:1px solid rgba(255,255,255,.08); border-radius:16px}
+.glass-strong{background:var(--glass-strong); backdrop-filter: blur(12px); border:1px solid rgba(255,255,255,.12); border-radius:12px}
+.glass-ios{background:linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06));
+  backdrop-filter: blur(16px); border:1px solid rgba(255,255,255,.22); border-radius:20px}
+
+/* ===== header/login ===== */
+.brand-dot{width:28px;height:28px;border-radius:999px;background:#19b3ff;display:grid;place-items:center;color:#002234;font-weight:700}
+.no-border{border:none}
+.login-screen{min-height:100vh; display:grid; place-items:center; padding:32px}
+.login-top{position:fixed; inset:0 auto auto 0; right:0; height:52px; display:flex; align-items:center; gap:8px; padding:8px 12px; margin:8px}
+.login-card{width:min(520px,92vw)}
+.login-logo{display:grid; place-items:center; gap:8px; margin-bottom:8px}
+.brand-dot.big{width:64px;height:64px;font-size:20px}
+.login-form{display:grid; gap:10px}
+.login-form label span{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.login-form input{width:100%;border-radius:12px;padding:12px 14px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1); color:var(--fg)}
+.login-actions{display:flex; gap:8px; margin-top:6px}
+.btn-primary{padding:10px 14px; border-radius:12px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#001; font-weight:800; border:1px solid rgba(255,255,255,.4)}
+.btn-ghost{padding:10px 14px; border-radius:12px; background:
+  linear-gradient(180deg, rgba(0,0,0,.24), rgba(0,0,0,.32)) padding-box,
+  linear-gradient(135deg,var(--accent),var(--accent-2)) border-box; border:1px solid transparent}
+
+/* ===== cards / chips ===== */
+.card{background:var(--glass); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:14px}
+.chip{font-size:12px; padding:4px 8px; border-radius:999px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18)}
+.pill{font-size:12px; padding:4px 8px; border-radius:10px;
+  border:1px solid transparent; background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08)) padding-box,
+  linear-gradient(135deg,var(--accent),var(--accent-2)) border-box}
+
+/* ===== widgets ===== */
+.widgets-grid{display:grid; gap:14px; grid-template-columns:repeat(12,1fr)}
+.widget-card{grid-column:span 12; padding:14px}
+@media(min-width:900px){ .widget-card:nth-child(1){grid-column:span 7} .widget-card:nth-child(2){grid-column:span 5} .widget-card:nth-child(3){grid-column:span 12} }
+.widget-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px}
+.widget-body{display:flex; gap:12px; align-items:center}
+.date-badge{width:66px;height:66px;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);display:grid;place-items:center;line-height:1}
+.date-badge .d{font-size:26px;font-weight:800}.date-badge .m{font-size:12px;opacity:.8;letter-spacing:1px}
+.event-info .title{font-weight:800}
+.tags{display:flex; gap:6px; margin-top:8px}
+.cta-btn{padding:10px 12px; border-radius:12px; color:var(--fg); font-weight:700;
+  border:1px solid transparent; background:
+    linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.30)) padding-box,
+    linear-gradient(135deg,var(--accent),var(--accent-2)) border-box}
+.cta-btn.alt{background:
+    linear-gradient(180deg, rgba(0,0,0,.20), rgba(0,0,0,.28)) padding-box,
+    linear-gradient(135deg,var(--accent),var(--accent-2)) border-box}
+.countdown{margin-top:8px;font-weight:700}
+.todo{display:grid;gap:8px}
+.todo li{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:8px}
+.todo .left{display:flex;gap:8px;align-items:center}
+.todo input[type="checkbox"]{width:18px;height:18px}
+.todo .del{background:transparent;border:none;color:var(--muted)}
+.todo-add{display:flex;gap:8px;margin-top:8px}
+.todo-add input{flex:1;border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);color:var(--fg)}
+#wgt-notes textarea{width:100%;border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);color:var(--fg)}
+
+/* ===== chat ===== */
+.chat-shell{display:flex; flex-direction:column; gap:8px}
+.chat-stream{height:52vh; overflow:auto; display:grid; gap:10px; padding:10px}
+.msg{display:flex}
+.msg.me{justify-content:flex-end}
+.bubble{max-width:min(80%,760px); padding:10px 12px; border-radius:14px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18)}
+.msg.me .bubble{background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:#001; font-weight:800}
+.typing span{display:inline-block;width:6px;height:6px;border-radius:999px;background:rgba(255,255,255,.7);margin-right:4px;animation:b 1s infinite alternate}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes b{to{transform:translateY(-2px);opacity:.5}}
+.composer .bar{display:flex; gap:8px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:8px}
+.composer input{flex:1;border:none;background:transparent;color:var(--fg);outline:none}
+.composer button{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.22)}
+
+/* ===== IA layout ===== */
+.ai-wrap{display:grid; grid-template-columns:280px 1fr; gap:14px}
+@media(max-width:920px){.ai-wrap{grid-template-columns:1fr}}
+.ai-sidebar{padding:12px}
+.ai-sidebar-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px}
+.ai-chat-list{display:grid; gap:8px; max-height:54vh; overflow:auto}
+.ai-item{display:flex; align-items:center; justify-content:space-between; gap:10px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:10px; cursor:pointer}
+.ai-item.active{outline:2px solid var(--accent)}
+.ai-item .name{font-weight:800}
+.ai-item .time{font-size:12px; color:var(--muted)}
+.ai-item .del{border:none;background:transparent;color:var(--muted)}
+.ai-pane{padding:12px}
+.ai-pane-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
+.ai-pane-actions .chip{margin-left:6px}
+.chip.danger{background:rgba(255,60,60,.15);border-color:rgba(255,60,60,.35);color:#ff9aa6}
+
+/* ===== Dock (sempre clicável) ===== */
+.tabbar-dock{
+  position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+  display:flex; gap:10px; padding:10px; border-radius:22px;
+  background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+  border:1px solid rgba(255,255,255,.28); backdrop-filter: blur(14px); z-index:9999; pointer-events:auto;
+}
+.dock-btn{min-width:120px; padding:12px 16px; font-weight:900; font-size:14px;
+  border-radius:14px; border:1px solid rgba(255,255,255,.26); background:rgba(0,0,0,.32)}
+.dock-btn.active{background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:#001; border-color:rgba(255,255,255,.6)}
+main{padding-bottom:140px}
+
+/* ===== Modal ===== */
+.modal{position:fixed; inset:0; display:grid; place-items:center; z-index:1200}
+.modal.hidden{display:none}
+.modal-backdrop{position:absolute; inset:0; backdrop-filter: blur(3px); background:rgba(0,0,0,.45)}
+.modal-card{position:relative; width:min(520px, 92vw); padding:14px}
+.modal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px}
+.modal-body{display:grid; gap:10px}
+.modal-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:8px}
+.modal-input{width:100%; border-radius:12px; padding:12px 14px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.18); color:var(--fg)}
+.modal-btn{padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.22)}
+.modal-btn.primary{background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:#001; font-weight:900}
+
+/* ===== Classroom grid bonito ===== */
+.teacher-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(240px,1fr));
+  gap:14px;
+}
+
+.teacher-card{
+  display:flex; flex-direction:column; gap:10px;
+  padding:14px;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  border-radius:18px;
+}
+.teacher-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+  border-color:rgba(255,255,255,.35);
+}
+
+.teacher-card .tc-top{ display:flex; gap:10px; align-items:center; }
+.teacher-card .avatar{
+  width:42px;height:42px;border-radius:12px; font-weight:900; display:grid;place-items:center;
+  color:#001;
+  background:linear-gradient(135deg, var(--accent), var(--accent-2));
+  border:1px solid rgba(255,255,255,.45);
+  text-transform:uppercase;
+}
+.teacher-card .info .name{ font-weight:800; letter-spacing:.2px; }
+.teacher-card .info .meta{ font-size:12px; color:var(--muted); }
+
+.teacher-card .tc-actions{
+  display:flex; gap:8px; margin-top:4px;
+}
+.teacher-card .cta-btn{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.30)) padding-box,
+    linear-gradient(135deg, var(--accent), var(--accent-2)) border-box;
+}

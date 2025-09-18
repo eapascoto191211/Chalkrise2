@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Chalkrise</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- Fundo / partículas -->
+  <canvas id="stars"></canvas>
+  <div id="themeFx" class="theme-fx" aria-hidden="true"></div>
+
+  <!-- LOGIN (visual) -->
+  <section id="screen-login" class="login-screen">
+    <div class="login-top glass">
+      <div class="brand-dot">Ch</div>
+      <div class="spacer"></div>
+      <button id="btnThemeLogin" class="theme-btn glass-strong">
+        <span class="theme-icon">
+          <svg id="icSunLogin" class="sun hidden" width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/>
+            <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M12 2v2"/><path d="M12 20v2"/><path d="M2 12h2"/><path d="M20 12h2"/>
+              <path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/>
+              <path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/>
+            </g>
+          </svg>
+          <svg id="icMoonLogin" class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" fill="none"/>
+          </svg>
+        </span>
+        <span id="themeLabelLogin">Tema: Escuro</span>
+      </button>
+    </div>
+
+    <div class="login-card card">
+      <div class="login-logo">
+        <div class="brand-dot big">Ch</div>
+        <h1>Chalkrise</h1>
+        <p class="text-muted">Entre para continuar</p>
+      </div>
+
+      <form class="login-form" onsubmit="return false;">
+        <label>
+          <span>E-mail</span>
+          <input type="email" placeholder="nome@escola.edu.br" autocomplete="username" />
+        </label>
+        <label>
+          <span>Senha</span>
+          <input type="password" placeholder="••••••••" autocomplete="current-password" />
+        </label>
+
+        <div class="login-actions">
+          <button id="btnLogin" class="btn-primary">Entrar</button>
+          <button id="btnSkip" type="button" class="btn-ghost">Pular login</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- APP -->
+  <div id="app" class="hidden">
+    <header class="safe-top glass no-border">
+      <div class="mx-auto max-w-screen-lg px-4 py-3 flex items-center gap-3">
+        <div class="brand-dot">Ch</div>
+        <h1 class="font-semibold tracking-tight">Chalkrise</h1>
+        <div class="ml-auto text-xs" id="today"></div>
+        <button id="btnGoLogin" class="ml-2 text-xs px-3 py-1 rounded-lg glass-strong">Login</button>
+        <button id="btnTheme" class="ml-2 text-xs px-3 py-1 rounded-lg glass-strong flex items-center gap-2">
+          <span class="theme-icon">
+            <svg id="icSun" class="sun hidden" width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/>
+              <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M12 2v2"/><path d="M12 20v2"/><path d="M2 12h2"/><path d="M20 12h2"/>
+                <path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/>
+                <path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/>
+              </g>
+            </svg>
+            <svg id="icMoon" class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" fill="none"/>
+            </svg>
+          </span>
+          <span id="themeLabel">Tema: Escuro</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="mx-auto w-full max-w-screen-lg px-4 pt-8 pb-44 space-y-6">
+      <!-- Início -->
+      <section id="tab-geral" class="tab active" role="tabpanel" aria-labelledby="btnHome">
+        <div class="widgets-grid">
+          <div class="widget-card glass-ios" id="wgt-evento">
+            <div class="widget-head">
+              <h3>Evento de hoje</h3><span class="pill">Calendário</span>
+            </div>
+            <div class="widget-body">
+              <div class="date-badge">
+                <span class="d" id="evt-day">18</span><span class="m" id="evt-mon">SET</span>
+              </div>
+              <div class="event-info">
+                <p class="title" id="evt-title">Reunião pedagógica</p>
+                <p class="muted" id="evt-where">15:00 • Sala multimídia</p>
+                <div class="tags">
+                  <span class="chip">Trazer diários</span>
+                  <span class="chip">Duração 1h</span>
+                </div>
+                <div class="countdown" id="evt-countdown">—</div>
+              </div>
+            </div>
+            <div class="widget-actions">
+              <button class="cta-btn" id="evt-details">Ver detalhes</button>
+              <button class="cta-btn alt" id="evt-remind">Adicionar lembrete</button>
+            </div>
+          </div>
+
+          <div class="widget-card glass-ios" id="wgt-check">
+            <div class="widget-head">
+              <h3>Checklist rápido</h3><span class="pill">Hoje</span>
+            </div>
+            <ul class="todo" id="todoList"></ul>
+            <div class="todo-add">
+              <input id="todoInput" placeholder="Adicionar item…" />
+              <button id="todoAdd" class="cta-btn">Adicionar</button>
+            </div>
+          </div>
+
+          <div class="widget-card glass-ios" id="wgt-notes">
+            <div class="widget-head">
+              <h3>Notas rápidas</h3><span class="pill">Local</span>
+            </div>
+            <textarea id="notesArea" rows="4" placeholder="Escreva algo…"></textarea>
+            <div class="text-right"><span class="muted text-xs" id="notesSaved">—</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="chip">Hoje</div>
+            <h3 class="font-semibold">Registro de presença</h3>
+          </div>
+          <p class="text-sm text-muted">2 turmas aguardando lançamento.</p>
+        </div>
+      </section>
+
+      <!-- Turmas -->
+      <section id="tab-turmas" class="tab" role="tabpanel" aria-labelledby="btnTurmas">
+        <div class="space-y-3">
+          <div class="card">
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold">Minhas turmas</h3>
+              <span class="text-xs text-muted">8 turmas</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="font-semibold">7º A — Matemática</h4>
+                <p class="text-xs text-muted">Prof. Almeida • Manhã</p>
+              </div>
+              <span class="chip">28 alunos</span>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <span class="chip">Prova: 24/09</span>
+              <span class="chip">2 tarefas hoje</span>
+              <span class="chip">Sala 12</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="font-semibold">8º B — Ciências</h4>
+                <p class="text-xs text-muted">Profa. Letícia • Tarde</p>
+              </div>
+              <span class="chip">31 alunos</span>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <span class="chip">Experimento: 20/09</span>
+              <span class="chip">1 aviso</span>
+              <span class="chip">Lab 2</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Classroom (agora em cards/blocos) -->
+      <section id="tab-classroom" class="tab" role="tabpanel" aria-labelledby="btnClassroom">
+        <div class="card classroom-subheader">
+          <h3 class="font-semibold">Classroom</h3>
+          <span class="pill">Professores disponíveis</span>
+        </div>
+
+        <div id="classroom-list">
+          <div class="teacher-grid">
+            <div class="teacher">
+              <div class="teacher-card glass-ios">
+                <div class="tc-top">
+                  <div class="avatar">AL</div>
+                  <div class="info">
+                    <h4 class="name">Ana Luísa</h4>
+                    <div class="meta">Matemática • Manhã</div>
+                  </div>
+                </div>
+                <div class="tc-actions">
+                  <button class="cta-btn" data-teacher="Ana Luísa">Conversar</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="teacher">
+              <div class="teacher-card glass-ios">
+                <div class="tc-top">
+                  <div class="avatar">RG</div>
+                  <div class="info">
+                    <h4 class="name">Rafael Gomes</h4>
+                    <div class="meta">História • Tarde</div>
+                  </div>
+                </div>
+                <div class="tc-actions">
+                  <button class="cta-btn" data-teacher="Rafael Gomes">Conversar</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="teacher">
+              <div class="teacher-card glass-ios">
+                <div class="tc-top">
+                  <div class="avatar">ML</div>
+                  <div class="info">
+                    <h4 class="name">Melina Lopes</h4>
+                    <div class="meta">Português • Manhã</div>
+                  </div>
+                </div>
+                <div class="tc-actions">
+                  <button class="cta-btn" data-teacher="Melina Lopes">Conversar</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="teacher">
+              <div class="teacher-card glass-ios">
+                <div class="tc-top">
+                  <div class="avatar">BH</div>
+                  <div class="info">
+                    <h4 class="name">Bruno Holanda</h4>
+                    <div class="meta">Geografia • Noite</div>
+                  </div>
+                </div>
+                <div class="tc-actions">
+                  <button class="cta-btn" data-teacher="Bruno Holanda">Conversar</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="teacher">
+              <div class="teacher-card glass-ios">
+                <div class="tc-top">
+                  <div class="avatar">LR</div>
+                  <div class="info">
+                    <h4 class="name">Laura Ribeiro</h4>
+                    <div class="meta">Ciências • Tarde</div>
+                  </div>
+                </div>
+                <div class="tc-actions">
+                  <button class="cta-btn" data-teacher="Laura Ribeiro">Conversar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Classroom -->
+        <div id="classroom-chat" class="hidden">
+          <div class="card classroom-subheader">
+            <button id="btnBackClassroom" class="chip">&larr; Voltar</button>
+            <h3 class="font-semibold">Chat com <span id="teacherName">—</span></h3>
+          </div>
+
+          <div class="chat-shell">
+            <div class="chat-stream" id="classroomStream">
+              <div class="msg ai"><div class="bubble pop"><h4 id="teacherShort">Professor</h4><p>Oi! Como posso ajudar?</p></div></div>
+            </div>
+
+            <div class="composer safe-bottom">
+              <div class="bar">
+                <button id="btnAttach" title="Adicionar anexos">&#128206;</button>
+                <input id="attachInput" type="file" multiple class="hidden" />
+                <input id="classroomInput" placeholder="Escreva sua mensagem…" />
+                <button id="btnClassroomSend">Enviar</button>
+              </div>
+              <div id="attachList" class="files"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chat IA -->
+      <section id="tab-chat" class="tab" role="tabpanel" aria-labelledby="btnChatIA">
+        <div class="ai-wrap">
+          <aside class="ai-sidebar glass-ios">
+            <div class="ai-sidebar-head">
+              <h3>Meus chats</h3>
+              <button id="btnNewChat" class="cta-btn">Novo</button>
+            </div>
+            <div id="chatList" class="ai-chat-list"></div>
+          </aside>
+
+          <div class="ai-pane glass-ios">
+            <div class="ai-pane-head">
+              <div class="title">
+                <h3 id="activeChatTitle">Chalkrise IA</h3>
+                <span class="muted" id="activeChatHint">Escolha um chat ou crie um novo</span>
+              </div>
+              <div class="ai-pane-actions">
+                <button id="btnRenameChat" class="chip">Renomear</button>
+                <button id="btnDeleteChat" class="chip danger">Excluir</button>
+              </div>
+            </div>
+
+            <div class="chat-shell">
+              <div class="chat-stream" id="chatStream"></div>
+              <div class="composer safe-bottom">
+                <div class="bar">
+                  <input id="chatInput" placeholder="Escreva sua mensagem… (visual)" />
+                  <button id="btnSend">Enviar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Dock central -->
+    <nav class="tabbar-dock glass-ios" id="dock" role="tablist" aria-label="Navegação">
+      <button id="btnHome"     class="dock-btn active" data-open="#tab-geral"     role="tab" aria-selected="true">Início</button>
+      <button id="btnTurmas"   class="dock-btn"         data-open="#tab-turmas"   role="tab" aria-selected="false">Turmas</button>
+      <button id="btnClassroom"class="dock-btn"         data-open="#tab-classroom"role="tab" aria-selected="false">Classroom</button>
+      <button id="btnChatIA"   class="dock-btn"         data-open="#tab-chat"     role="tab" aria-selected="false">Chat IA</button>
+    </nav>
+  </div>
+
+  <!-- Modal reutilizável -->
+  <div id="appModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card glass-ios">
+      <div class="modal-head">
+        <h3 id="modalTitle">Título</h3>
+        <button id="modalClose" class="chip">Fechar</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
