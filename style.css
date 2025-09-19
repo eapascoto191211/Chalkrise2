@@ -22,10 +22,10 @@ body{background:var(--bg);color:var(--fg);font:15px/1.35 ui-sans-serif,system-ui
 .theme-fx.on{opacity:1}
 
 /* glass */
-.glass{background:var(--glass); backdrop-filter: blur(12px); border:1px solid rgba(255,255,255,.08); border-radius:16px}
-.glass-strong{background:var(--glass-strong); backdrop-filter: blur(12px); border:1px solid rgba(255,255,255,.12); border-radius:12px}
+.glass{background:var(--glass); backdrop-filter: blur(12px); border:1px solid rgba(255,255,255,.08); border-radius:16px; will-change:transform,opacity}
+.glass-strong{background:var(--glass-strong); backdrop-filter: blur(12px); border:1px solid rgba(255,255,255,.12); border-radius:12px; will-change:transform,opacity}
 .glass-ios{background:linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06));
-  backdrop-filter: blur(16px); border:1px solid rgba(255,255,255,.22); border-radius:20px}
+  backdrop-filter: blur(16px); border:1px solid rgba(255,255,255,.22); border-radius:20px; will-change:transform,opacity}
 
 /* header/login */
 .brand-dot{width:28px;height:28px;border-radius:999px;background:#19b3ff;display:grid;place-items:center;color:#002234;font-weight:700}
@@ -52,15 +52,19 @@ body{background:var(--bg);color:var(--fg);font:15px/1.35 ui-sans-serif,system-ui
   border:1px solid transparent; background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08)) padding-box,
   linear-gradient(135deg,var(--accent),var(--accent-2)) border-box}
 
-/* tabs */
-.tab{display:none; opacity:0}
+/* ===== Tabs (desktop = suave | mobile = exagero) ===== */
+.tab{display:none; opacity:0; transition:opacity .22s ease; will-change:opacity,transform}
 .tab.active{display:block; opacity:1}
-.tab.slide-in-left{animation:slideInLeft .38s cubic-bezier(.2,.9,.2,1.2) both}
-.tab.slide-in-right{animation:slideInRight .38s cubic-bezier(.2,.9,.2,1.2) both}
-.tab.fade-out{animation:fadeOut .18s ease both}
-@keyframes slideInLeft{from{transform:translateX(-16px);opacity:.1}to{transform:none;opacity:1}}
-@keyframes slideInRight{from{transform:translateX(16px);opacity:.1}to{transform:none;opacity:1}}
-@keyframes fadeOut{to{opacity:0; transform:translateY(4px)}}
+
+/* MOBILE: ativa slides + transições “exageradas” só em pointer:coarse */
+@media (pointer:coarse) {
+  .tab.slide-in-left{animation:slideInLeft .32s cubic-bezier(.25,.9,.25,1.15) both}
+  .tab.slide-in-right{animation:slideInRight .32s cubic-bezier(.25,.9,.25,1.15) both}
+  .tab.fade-out{animation:fadeOut .18s ease both}
+  @keyframes slideInLeft{from{transform:translateX(-22px);opacity:.08}to{transform:none;opacity:1}}
+  @keyframes slideInRight{from{transform:translateX(22px);opacity:.08}to{transform:none;opacity:1}}
+  @keyframes fadeOut{to{opacity:0; transform:translateY(4px)}}
+}
 
 /* widgets Home */
 .widgets-grid{display:grid; gap:14px}
@@ -71,10 +75,11 @@ body{background:var(--bg);color:var(--fg);font:15px/1.35 ui-sans-serif,system-ui
 .list-item{
   display:flex; align-items:flex-start; gap:10px; padding:10px;
   background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.18); border-radius:12px;
+  will-change:transform,opacity;
+  transition:transform .16s ease, opacity .16s ease;
 }
-.list-item .title{font-weight:800}
-.list-item .meta{font-size:12px; color:var(--muted)}
-.list-item .actions{margin-left:auto; display:flex; gap:6px}
+.list-item.pop{transform:translateY(2px); opacity:.98}
+.list-item.pop:hover{transform:none; opacity:1}
 
 /* CTA + animação */
 .cta-btn{padding:10px 12px; border-radius:12px; color:var(--fg); font-weight:700; position:relative; overflow:hidden;
@@ -84,14 +89,14 @@ body{background:var(--bg);color:var(--fg);font:15px/1.35 ui-sans-serif,system-ui
 .cta-btn.alt{background:
     linear-gradient(180deg, rgba(0,0,0,.20), rgba(0,0,0,.28)) padding-box,
     linear-gradient(135deg,var(--accent),var(--accent-2)) border-box}
-.ripple{position:absolute;border-radius:999px;transform:scale(0);animation:ripple .6s ease-out;pointer-events:none;background:rgba(255,255,255,.55)}
-@keyframes ripple{to{transform:scale(12);opacity:0}}
+.ripple{position:absolute;border-radius:999px;transform:scale(0);animation:ripple .5s ease-out;pointer-events:none;background:rgba(255,255,255,.45); will-change:transform,opacity}
+@keyframes ripple{to{transform:scale(10);opacity:0}}
 
 /* classroom grid */
 .teacher-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:14px}
 .teacher-card{display:flex; flex-direction:column; gap:10px; padding:14px; border-radius:18px;
-  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease}
-.teacher-card:hover{ transform:translateY(-2px) scale(1.01); box-shadow:0 12px 36px rgba(0,0,0,.28); border-color:rgba(255,255,255,.35) }
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; will-change:transform}
+.teacher-card:hover{ transform:translateY(-1px); box-shadow:0 8px 26px rgba(0,0,0,.22); border-color:rgba(255,255,255,.35) }
 .tc-top{ display:flex; gap:10px; align-items:center }
 .avatar{
   width:42px;height:42px;border-radius:12px; font-weight:900; display:grid;place-items:center;
@@ -104,13 +109,15 @@ body{background:var(--bg);color:var(--fg);font:15px/1.35 ui-sans-serif,system-ui
 
 /* chat base */
 .chat-shell{display:flex; flex-direction:column; gap:8px}
-.chat-stream{height:52vh; overflow:auto; display:grid; gap:10px; padding:10px}
+.chat-stream{height:52vh; overflow:auto; display:grid; gap:10px; padding:10px; will-change:scroll-position}
 .msg{display:flex}
 .msg.me{justify-content:flex-end}
 .bubble{max-width:min(80%,760px); padding:10px 12px; border-radius:14px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18)}
 .msg.me .bubble{background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:#001; font-weight:800}
-.pop{animation:popIn .35s cubic-bezier(.2,.9,.3,1.4)}
-@keyframes popIn{0%{transform:scale(.85);opacity:.2}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+@media (pointer:coarse) {
+  .pop{animation:popIn .28s cubic-bezier(.2,.85,.3,1.35)}
+  @keyframes popIn{0%{transform:scale(.92);opacity:.2}70%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
+}
 .typing span{display:inline-block;width:6px;height:6px;border-radius:999px;background:rgba(255,255,255,.7);margin-right:4px;animation:b 1s infinite alternate}
 .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
 @keyframes b{to{transform:translateY(-2px);opacity:.5}}
@@ -134,29 +141,34 @@ body{background:var(--bg);color:var(--fg);font:15px/1.35 ui-sans-serif,system-ui
 .ai-pane-actions .chip{margin-left:6px}
 .chip.danger{background:rgba(255,60,60,.15);border-color:rgba(255,60,60,.35);color:#ff9aa6}
 
-/* dock (animação exagerada) */
+/* dock */
 .tabbar-dock{
-  position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+  position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom, 0) + 18px); transform:translateX(-50%);
   display:flex; gap:10px; padding:10px; border-radius:22px;
   background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
   border:1px solid rgba(255,255,255,.28); backdrop-filter: blur(14px); z-index:9999; pointer-events:auto;
+  will-change:transform,opacity;
 }
 .dock-btn{
   min-width:140px; padding:12px 16px; font-weight:900; font-size:14px; position:relative; overflow:hidden;
-  border-radius:14px; border:1px solid rgba(255,255,255,.26); background:rgba(0,0,0,.32); transition:transform .16s ease, box-shadow .2s ease;
+  border-radius:14px; border:1px solid rgba(255,255,255,.26); background:rgba(0,0,0,.32); transition:transform .16s ease, box-shadow .18s ease;
 }
 .dock-btn:active{transform:translateY(1px) scale(.98)}
-.dock-btn.pulse{animation:dockPulse .45s cubic-bezier(.2,.8,.2,1) both}
-@keyframes dockPulse{
-  0%{transform:scale(1); box-shadow:0 0 0 0 rgba(106,193,255,.0)}
-  40%{transform:scale(1.06); box-shadow:0 10px 30px rgba(106,193,255,.35)}
-  100%{transform:scale(1); box-shadow:0 0 0 0 rgba(106,193,255,.0)}
-}
 .dock-btn.active{background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:#001; border-color:rgba(255,255,255,.6)}
-main{padding-bottom:140px}
+/* pulse forte apenas no mobile */
+@media (pointer:coarse) {
+  .dock-btn.pulse{animation:dockPulse .38s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes dockPulse{
+    0%{transform:scale(1)}
+    45%{transform:scale(1.06)}
+    100%{transform:scale(1)}
+  }
+}
+
+main{padding-bottom:calc(140px + env(safe-area-inset-bottom, 0))}
 
 /* Toast */
-.toast{position:fixed; left:50%; bottom:100px; transform:translateX(-50%) translateY(20px); opacity:0;
+.toast{position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom, 0) + 100px); transform:translateX(-50%) translateY(20px); opacity:0;
   padding:10px 14px; border-radius:12px; background:rgba(0,0,0,.6); color:#fff; z-index:1200; transition:.3s ease}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 .toast.hidden{display:none}
@@ -177,4 +189,9 @@ main{padding-bottom:140px}
 @media (pointer:coarse) {
   .dock-btn{min-width:33vw}
   .chat-stream{height:48vh}
+}
+
+/* acessibilidade */
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important; transition:none!important}
 }

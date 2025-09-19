@@ -3,6 +3,9 @@ const $  = (q, el=document) => el.querySelector(q);
 const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
 const esc = s => s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+/* tiny perf util */
+const isCoarse = matchMedia('(pointer:coarse)').matches;
+
 /* =========================
    SFX — WebAudio (tap/woosh/pop/blip)
    ========================= */
@@ -14,16 +17,15 @@ const SFX = (() => {
       if (!Ctx) return false;
       AC = new Ctx();
       master = AC.createGain();
-      master.gain.value = 0.20; // volume global
+      master.gain.value = 0.18; // volume global mais baixo
       master.connect(AC.destination);
     }
     if (AC.state === 'suspended') AC.resume();
     return true;
   }
-  // ticker util
   const now = () => (ensure(), AC ? AC.currentTime : 0);
 
-  function envAttackRelease(node, a=0.005, r=0.12, peak=1.0) {
+  function env(node, a=0.005, r=0.12, peak=1.0) {
     if (!node.gain || !AC) return;
     const t = now();
     node.gain.cancelScheduledValues(t);
@@ -35,10 +37,8 @@ const SFX = (() => {
   function osc(type='sine', freq=440) {
     const o = AC.createOscillator();
     o.type = type; o.frequency.value = freq;
-    const g = AC.createGain();
-    g.gain.value = 0.0001;
-    o.connect(g).connect(master);
-    o.start();
+    const g = AC.createGain(); g.gain.value = 0.0001;
+    o.connect(g).connect(master); o.start();
     return { o, g };
   }
 
@@ -48,51 +48,14 @@ const SFX = (() => {
     for (let i=0;i<d.length;i++) d[i] = (Math.random()*2-1)*0.9;
     const s = AC.createBufferSource(); s.buffer = b; s.loop = false;
     const g = AC.createGain(); g.gain.value = 0.0001;
-    s.connect(g).connect(master);
-    s.start();
+    s.connect(g).connect(master); s.start();
     return { s, g };
   }
 
-  // tap: click curtinho (triangle + ruido sutil)
-  function tap() {
-    if (!ensure()) return;
-    const {o,g} = osc('triangle', 420);
-    envAttackRelease(g, 0.002, 0.07, 0.6);
-    o.stop(AC.currentTime + 0.12);
-
-    const n = noise(); envAttackRelease(n.g, 0.001, 0.05, 0.3);
-  }
-
-  // blip: envio mensagem
-  function blip() {
-    if (!ensure()) return;
-    const {o,g} = osc('sine', 650);
-    envAttackRelease(g, 0.006, 0.18, 0.7);
-    // leve sweep
-    o.frequency.exponentialRampToValueAtTime(740, AC.currentTime + 0.14);
-    o.stop(AC.currentTime + 0.22);
-  }
-
-  // pop: chegada/resposta
-  function pop() {
-    if (!ensure()) return;
-    const {o,g} = osc('sine', 180);
-    envAttackRelease(g, 0.004, 0.18, 0.7);
-    o.frequency.exponentialRampToValueAtTime(280, AC.currentTime + 0.09);
-    o.stop(AC.currentTime + 0.22);
-  }
-
-  // woosh: troca de aba
-  function woosh() {
-    if (!ensure()) return;
-    const n = noise(); const bp = AC.createBiquadFilter();
-    bp.type='bandpass'; bp.frequency.value = 300; bp.Q.value = 0.6;
-    n.g.disconnect(); n.g.connect(bp).connect(master);
-    envAttackRelease(n.g, 0.005, 0.28, 0.75);
-    // sweep do filtro
-    const t = now();
-    bp.frequency.linearRampToValueAtTime(1200, t + 0.28);
-  }
+  function tap()  { if(!ensure()) return; const {o,g}=osc('triangle', 420); env(g, .002, .06, .55); o.stop(AC.currentTime+.12); }
+  function blip() { if(!ensure()) return; const {o,g}=osc('sine', 650);   env(g, .006, .16, .7);  o.frequency.exponentialRampToValueAtTime(740, AC.currentTime+.12); o.stop(AC.currentTime+.22); }
+  function pop()  { if(!ensure()) return; const {o,g}=osc('sine', 180);   env(g, .004, .16, .65); o.frequency.exponentialRampToValueAtTime(260, AC.currentTime+.08); o.stop(AC.currentTime+.20); }
+  function woosh(){ if(!ensure()) return; const n=noise(); const bp=AC.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=280; bp.Q.value=.7; n.g.disconnect(); n.g.connect(bp).connect(master); env(n.g,.005,.24,.7); const t=now(); bp.frequency.linearRampToValueAtTime(1100, t+.24); }
 
   function resume(){ ensure(); }
   return { tap, blip, pop, woosh, resume };
@@ -120,7 +83,7 @@ const SFX = (() => {
       const next=root.dataset.theme==='dark'?'light':'dark';
       applyTheme(next,true); reflect(next);
       SFX.pop();
-    });
+    }, {passive:true});
     function reflect(mode){
       if(label) label.textContent=`Tema: ${mode==='dark'?'Escuro':'Claro'}`;
       if(sun&&moon){
@@ -130,33 +93,35 @@ const SFX = (() => {
       }
     }
   }
-
   function applyTheme(mode, animate){
     root.dataset.theme=mode; localStorage.setItem('theme',mode);
-    if(animate){ fx.classList.add('on'); setTimeout(()=>fx.classList.remove('on'), 320); }
+    if(animate){ fx.classList.add('on'); setTimeout(()=>fx.classList.remove('on'), 280); }
     dispatchEvent(new CustomEvent('themechange',{detail:{mode}}));
   }
 })();
 
-/* partículas */
+/* partículas (leve) */
 (() => {
-  const cv=$('#stars'); if(!cv) return; const ctx=cv.getContext('2d');
-  let W=0,H=0,P=[],topc,botc,fill,halo;
+  const cv=$('#stars'); if(!cv) return; const ctx=cv.getContext('2d',{alpha:true});
+  let W=0,H=0,P=[],topc,botc,fill,halo, frame=0;
   function pal(){const cs=getComputedStyle(document.documentElement);
     topc=cs.getPropertyValue('--sky-top').trim(); botc=cs.getPropertyValue('--sky-bot').trim();
     fill=cs.getPropertyValue('--star-fill').trim(); halo=cs.getPropertyValue('--star-halo').trim();}
   pal(); addEventListener('themechange',pal);
   function resize(){W=cv.width=innerWidth; H=cv.height=innerHeight;
-    const n=Math.min(220,Math.floor(W*H/10000));
-    P=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.8+.4,vx:(Math.random()-.5)*.2,vy:-(Math.random()*.6+.1)}));}
-  addEventListener('resize',resize); resize();
+    const density = isCoarse ? 10000 : 14000; // menos no mobile
+    const n=Math.min(200,Math.floor(W*H/density));
+    P=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.6+.4,vx:(Math.random()-.5)*.18,vy:-(Math.random()*.5+.08)}));}
+  addEventListener('resize',resize,{passive:true}); resize();
   (function draw(){
+    // pula frames no mobile pra economizar
+    if(isCoarse){ frame=(frame+1)%2; if(frame) { requestAnimationFrame(draw); return; } }
     ctx.clearRect(0,0,W,H);
     const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,topc); g.addColorStop(1,botc);
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
     P.forEach(p=>{p.x+=p.vx; p.y+=p.vy; if(p.y<-10){p.y=H+10;p.x=Math.random()*W}
       ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle=fill; ctx.fill();
-      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*2.2,0,Math.PI*2); ctx.strokeStyle=halo; ctx.stroke();});
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*2,0,Math.PI*2); ctx.strokeStyle=halo; ctx.stroke();});
     requestAnimationFrame(draw);
   })();
 })();
@@ -164,9 +129,9 @@ const SFX = (() => {
 /* login (visual) */
 (() => {
   const screen=$('#screen-login'), app=$('#app');
-  $('#btnSkip')?.addEventListener('click',()=>{ goHome(); SFX.pop(); });
+  $('#btnSkip')?.addEventListener('click',()=>{ goHome(); SFX.pop(); },{passive:true});
   $('#btnLogin')?.addEventListener('click',e=>{e.preventDefault(); goHome(); SFX.pop();});
-  $('#btnGoLogin')?.addEventListener('click',()=>{app.classList.add('hidden'); screen.classList.remove('hidden'); window.scrollTo({top:0,behavior:'instant'}); SFX.woosh();});
+  $('#btnGoLogin')?.addEventListener('click',()=>{app.classList.add('hidden'); screen.classList.remove('hidden'); window.scrollTo({top:0,behavior:'instant'}); SFX.woosh();},{passive:true});
   function goHome(){screen.classList.add('hidden'); app.classList.remove('hidden');}
 })();
 
@@ -184,7 +149,7 @@ const Modal = (() => {
       const el = document.createElement('button');
       el.className = `modal-btn ${b.variant||''}`.trim();
       el.textContent = b.label;
-      el.addEventListener('click', ()=>b.onClick?.(close));
+      el.addEventListener('click', ()=>b.onClick?.(close), {passive:true});
       actions.appendChild(el);
     });
     wrap.classList.remove('hidden');
@@ -195,66 +160,84 @@ const Modal = (() => {
   return { open, close, el:wrap };
 })();
 
-/* Ripple (todos os botões) + init audio */
+/* Ripple (mobile apenas) */
 (() => {
+  if(!isCoarse) return; // ripple só no celular
   const selector = '.cta-btn,.dock-btn,.chip,.btn-primary,.btn-ghost,.composer button';
   document.addEventListener('pointerdown', e=>{
     const btn = e.target.closest(selector);
     if(!btn) return;
-    SFX.resume();            // garante o AudioContext
-    SFX.tap();               // toque curtinho
-
-    const r = document.createElement('span');
-    r.className='ripple';
+    SFX.resume(); SFX.tap();
+    const r = document.createElement('span'); r.className='ripple';
     const rect = btn.getBoundingClientRect();
     const d = Math.max(rect.width, rect.height);
     r.style.width=r.style.height=d+'px';
     r.style.left = (e.clientX-rect.left - d/2)+'px';
     r.style.top  = (e.clientY-rect.top  - d/2)+'px';
     btn.appendChild(r);
-    setTimeout(()=>r.remove(), 650);
+    setTimeout(()=>r.remove(), 520);
   }, {passive:true});
 })();
 
-/* Tabs com animação + swipe */
+/* Tabs com animação + swipe (mobile forte / desktop suave) */
 (() => {
   const dock = $('#dock');
   const btns = $$('.dock-btn', dock);
   const tabs = ['#tab-home','#tab-classroom','#tab-chat'];
   let current = 0;
+  let navLock = false;      // evita spam de cliques
+  const NAV_MS = isCoarse ? 360 : 180;
 
-  function vibrate(ms=18){ if(navigator.vibrate) navigator.vibrate(ms); }
+  function vibrate(ms=12){ if(isCoarse && navigator.vibrate) navigator.vibrate(ms); }
   function toast(text){
+    if(!isCoarse) return; // toast só no mobile
     const t = $('#toast'); if(!t) return;
     t.textContent = text; t.classList.remove('hidden'); requestAnimationFrame(()=>t.classList.add('show'));
-    setTimeout(()=>{t.classList.remove('show'); setTimeout(()=>t.classList.add('hidden'),300);},900);
+    setTimeout(()=>{t.classList.remove('show'); setTimeout(()=>t.classList.add('hidden'),240);},800);
+  }
+
+  function clearAnim(el){
+    el?.classList.remove('slide-in-right','slide-in-left','fade-out');
   }
 
   function activate(idx, dir='right'){
-    if(idx===current || idx<0 || idx>=tabs.length) return;
+    if(idx===current || idx<0 || idx>=tabs.length || navLock) return;
+    navLock = true;
+
     const old = $(tabs[current]);
     const next = $(tabs[idx]);
 
-    old && old.classList.add('fade-out');
-    next && next.classList.add('active', dir==='right'?'slide-in-right':'slide-in-left');
+    // limpa classes antigas antes de aplicar
+    clearAnim(old); clearAnim(next);
 
+    // desktop: só fade; mobile: slide + fade-out
+    if(isCoarse){
+      old && old.classList.add('fade-out');
+      next && next.classList.add('active', dir==='right'?'slide-in-right':'slide-in-left');
+    }else{
+      next && next.classList.add('active');
+      old && old.classList.remove('active');
+    }
+
+    // dock states + pulso (mobile)
     btns.forEach((b,i)=>{
       const on = i===idx;
       b.classList.toggle('active', on);
       b.setAttribute('aria-selected', on?'true':'false');
-      if(on){ b.classList.add('pulse'); setTimeout(()=>b.classList.remove('pulse'), 460); }
+      if(isCoarse && on){ b.classList.add('pulse'); setTimeout(()=>b.classList.remove('pulse'), 380); }
     });
 
-    vibrate(12);
-    SFX.woosh();     // som de transição entre abas
+    vibrate(10);
+    SFX.woosh();
     toast(btns[idx].textContent.trim());
 
     setTimeout(()=>{
       old && old.classList.remove('active','fade-out');
-      next && next.classList.remove('slide-in-right','slide-in-left');
+      if(isCoarse) next && next.classList.remove('slide-in-right','slide-in-left');
       current = idx;
-      window.scrollTo({top:0,behavior:'smooth'});
-    }, 380);
+      window.scrollTo({top:0,behavior:isCoarse?'smooth':'auto'});
+      navLock = false;
+    }, NAV_MS);
   }
 
   dock.addEventListener('click', e=>{
@@ -262,35 +245,35 @@ const Modal = (() => {
     const idx = Number(btn.dataset.index ?? btns.indexOf(btn));
     const dir = idx>current?'right':'left';
     activate(idx, dir);
-  });
+  }, {passive:true});
 
   // Swipe (mobile)
-  let sx=0, sy=0, dx=0, dy=0, tracking=false, startT=0;
-  const page = $('#page');
-  const isCoarse = matchMedia('(pointer:coarse)').matches;
-
-  function onStart(e){
-    const t = e.touches ? e.touches[0] : e;
-    tracking = true; sx=t.clientX; sy=t.clientY; dx=0; dy=0; startT=performance.now();
-  }
-  function onMove(e){
-    if(!tracking) return;
-    const t = e.touches ? e.touches[0] : e;
-    dx = t.clientX - sx; dy = t.clientY - sy;
-    if(Math.abs(dx) > Math.abs(dy)*1.3) e.preventDefault();
-  }
-  function onEnd(){
-    if(!tracking) return; tracking=false;
-    const dt = performance.now()-startT;
-    const THRESH = 60; const FAST = 0.35;
-    const v = Math.abs(dx)/Math.max(dt,1);
-    if(Math.abs(dx) > THRESH || v>FAST){
-      if(dx<0) activate(current+1,'right');
-      else     activate(current-1,'left');
-    }
-  }
-
   if(isCoarse){
+    let sx=0, sy=0, dx=0, dy=0, tracking=false, startT=0;
+    const page = $('#page');
+
+    function onStart(e){
+      const t = e.touches ? e.touches[0] : e;
+      tracking = true; sx=t.clientX; sy=t.clientY; dx=0; dy=0; startT=performance.now();
+    }
+    function onMove(e){
+      if(!tracking) return;
+      const t = e.touches ? e.touches[0] : e;
+      dx = t.clientX - sx; dy = t.clientY - sy;
+      // bloqueia rolagem quando swipe horizontal domina
+      if(Math.abs(dx) > Math.abs(dy)*1.25) e.preventDefault();
+    }
+    function onEnd(){
+      if(!tracking) return; tracking=false;
+      const dt = performance.now()-startT;
+      const THRESH = 64; const FAST = 0.36;
+      const v = Math.abs(dx)/Math.max(dt,1);
+      if(Math.abs(dx) > THRESH || v>FAST){
+        if(dx<0) activate(current+1,'right');
+        else     activate(current-1,'left');
+      }
+    }
+
     page.addEventListener('touchstart', onStart, {passive:true});
     page.addEventListener('touchmove',  onMove,  {passive:false});
     page.addEventListener('touchend',   onEnd,   {passive:true});
@@ -385,7 +368,7 @@ const Modal = (() => {
       </li>`).join('');
     saveTasks();
   }
-  function toggleTask(id){ const it=state.find(x=>x.id===id); if(it){ it.done=!it.done; saveTasks(); SFX.tap(); } }
+  function toggleTask(id){ const it=state.find(x=>x.id===id); if(it){ it.done=!it.done; saveTasks(); if(isCoarse) SFX.tap(); } }
   function saveTasks(){ localStorage.setItem(TASK_KEY, JSON.stringify(state)); }
   function loadTasks(){ try{ return JSON.parse(localStorage.getItem(TASK_KEY)||'[]'); }catch{ return null; } }
 })();
@@ -402,22 +385,22 @@ const Modal = (() => {
       const name=btn.dataset.teacher||'Professor';
       tName&&(tName.textContent=name); tShort&&(tShort.textContent=name);
       list.classList.add('hidden'); chat.classList.remove('hidden');
-      stream&&(stream.innerHTML=`<div class="msg ai"><div class="bubble pop"><h4>${esc(name)}</h4><p>Oi! Como posso ajudar?</p></div></div>`);
+      stream&&(stream.innerHTML=`<div class="msg ai"><div class="bubble ${isCoarse?'pop':''}"><h4>${esc(name)}</h4><p>Oi! Como posso ajudar?</p></div></div>`);
       files=[]; attachList&&(attachList.innerHTML='');
-      if(navigator.vibrate) navigator.vibrate(15);
+      if(isCoarse && navigator.vibrate) navigator.vibrate(12);
       SFX.woosh();
-    });
+    },{passive:true});
   });
-  back?.addEventListener('click',()=>{chat.classList.add('hidden'); list.classList.remove('hidden'); SFX.woosh();});
-  attachBtn?.addEventListener('click',()=>attachInput?.click());
-  attachInput?.addEventListener('change',()=>{files=Array.from(attachInput.files||[]); attachList&&(attachList.innerHTML=files.map(f=>`<span class="chip">${esc(f.name)}</span>`).join('')); SFX.tap();});
-  function pushMe(html){ if(!stream) return; const d=document.createElement('div'); d.className='msg me'; d.innerHTML=`<div class="bubble pop">${html}</div>`; stream.appendChild(d); stream.scrollTop=stream.scrollHeight; SFX.blip(); }
-  function pushAI(html){ if(!stream) return; const d=document.createElement('div'); d.className='msg ai'; d.innerHTML=`<div class="bubble pop"><h4>${esc(tName?.textContent||'Professor')}</h4>${html}</div>`; stream.appendChild(d); stream.scrollTop=stream.scrollHeight; SFX.pop(); }
+  back?.addEventListener('click',()=>{chat.classList.add('hidden'); list.classList.remove('hidden'); SFX.woosh();},{passive:true});
+  attachBtn?.addEventListener('click',()=>attachInput?.click(),{passive:true});
+  attachInput?.addEventListener('change',()=>{files=Array.from(attachInput.files||[]); attachList&&(attachList.innerHTML=files.map(f=>`<span class="chip">${esc(f.name)}</span>`).join('')); if(isCoarse) SFX.tap();});
+  function pushMe(html){ if(!stream) return; const d=document.createElement('div'); d.className='msg me'; d.innerHTML=`<div class="bubble ${isCoarse?'pop':''}">${html}</div>`; stream.appendChild(d); stream.scrollTop=stream.scrollHeight; SFX.blip(); }
+  function pushAI(html){ if(!stream) return; const d=document.createElement('div'); d.className='msg ai'; d.innerHTML=`<div class="bubble ${isCoarse?'pop':''}"><h4>${esc(tName?.textContent||'Professor')}</h4>${html}</div>`; stream.appendChild(d); stream.scrollTop=stream.scrollHeight; SFX.pop(); }
   function typing(){ if(!stream) return null; const d=document.createElement('div'); d.className='msg ai'; d.innerHTML='<div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>'; stream.appendChild(d); stream.scrollTop=stream.scrollHeight; return d;}
   send?.addEventListener('click',()=>{const t=(input?.value||'').trim(); if(!t&&files.length===0) return;
     let body=''; if(t) body+=`<p>${esc(t)}</p>`; if(files.length) body+=`<div class="files">${files.map(f=>`<span class="chip">${esc(f.name)}</span>`).join('')}</div>`;
     pushMe(body); input&&(input.value=''); files=[]; attachInput&&(attachInput.value=''); attachList&&(attachList.innerHTML='');
-    const hold=typing(); setTimeout(()=>{ hold&&hold.remove(); pushAI('<p>(visual) Recebido! 👍</p>'); },700);
+    const hold=typing(); setTimeout(()=>{ hold&&hold.remove(); pushAI('<p>(visual) Recebido! 👍</p>'); },650);
   });
   input?.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault(); send?.click();}});
 })();
@@ -485,7 +468,7 @@ const Modal = (() => {
     const t = (input?.value||'').trim(); if(!t || !currentId) return;
     push('me', `<p>${esc(t)}</p>`); input.value='';
     const hold = typing();
-    setTimeout(()=>{ hold.remove(); push('ai','<h4>Chalkrise IA</h4><p>(visual) resposta fake 😄</p>'); }, 600);
+    setTimeout(()=>{ hold.remove(); push('ai','<h4>Chalkrise IA</h4><p>(visual) resposta fake 😄</p>'); }, 560);
   });
   input?.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault(); send?.click();}});
 
@@ -502,8 +485,8 @@ const Modal = (() => {
     $$('.ai-item', listEl).forEach(el=>{
       el.addEventListener('click', (e)=>{
         if(e.target.closest('[data-del]')) return;
-        currentId = el.dataset.id; openCurrent(); renderList(); SFX.tap();
-      });
+        currentId = el.dataset.id; openCurrent(); renderList(); if(isCoarse) SFX.tap();
+      }, {passive:true});
     });
     $$('[data-del]', listEl).forEach(btn=>{
       btn.addEventListener('click', (e)=>{
@@ -526,7 +509,7 @@ const Modal = (() => {
   }
 
   function push(who, html, persist=true){
-    const d=document.createElement('div'); d.className='msg '+who; d.innerHTML=`<div class="bubble pop">${html}</div>`;
+    const d=document.createElement('div'); d.className='msg '+who; d.innerHTML=`<div class="bubble ${isCoarse?'pop':''}">${html}</div>`;
     stream.appendChild(d); stream.scrollTop = stream.scrollHeight;
     if(who==='me') SFX.blip(); else SFX.pop();
     const c = chats.find(x=>x.id===currentId); if(c && persist){ c.msgs.push({who, html}); save(); }
