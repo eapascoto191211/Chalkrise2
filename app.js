@@ -3,12 +3,10 @@ const $  = (q, el=document) => el.querySelector(q);
 const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
 const esc = s => s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-/* tiny perf util */
+/* pointer mode */
 const isCoarse = matchMedia('(pointer:coarse)').matches;
 
-/* =========================
-   SFX — WebAudio (tap/woosh/pop/blip)
-   ========================= */
+/* ===== WebAudio SFX (leves) ===== */
 const SFX = (() => {
   let AC=null, master=null;
   function ensure() {
@@ -17,48 +15,22 @@ const SFX = (() => {
       if (!Ctx) return false;
       AC = new Ctx();
       master = AC.createGain();
-      master.gain.value = 0.18; // volume global mais baixo
+      master.gain.value = 0.16;
       master.connect(AC.destination);
     }
     if (AC.state === 'suspended') AC.resume();
     return true;
   }
   const now = () => (ensure(), AC ? AC.currentTime : 0);
-
-  function env(node, a=0.005, r=0.12, peak=1.0) {
-    if (!node.gain || !AC) return;
-    const t = now();
-    node.gain.cancelScheduledValues(t);
-    node.gain.setValueAtTime(0.0001, t);
-    node.gain.exponentialRampToValueAtTime(peak, t + a);
-    node.gain.exponentialRampToValueAtTime(0.0001, t + a + r);
-  }
-
-  function osc(type='sine', freq=440) {
-    const o = AC.createOscillator();
-    o.type = type; o.frequency.value = freq;
-    const g = AC.createGain(); g.gain.value = 0.0001;
-    o.connect(g).connect(master); o.start();
-    return { o, g };
-  }
-
-  function noise() {
-    const b = AC.createBuffer(1, AC.sampleRate * 1, AC.sampleRate);
-    const d = b.getChannelData(0);
-    for (let i=0;i<d.length;i++) d[i] = (Math.random()*2-1)*0.9;
-    const s = AC.createBufferSource(); s.buffer = b; s.loop = false;
-    const g = AC.createGain(); g.gain.value = 0.0001;
-    s.connect(g).connect(master); s.start();
-    return { s, g };
-  }
-
-  function tap()  { if(!ensure()) return; const {o,g}=osc('triangle', 420); env(g, .002, .06, .55); o.stop(AC.currentTime+.12); }
-  function blip() { if(!ensure()) return; const {o,g}=osc('sine', 650);   env(g, .006, .16, .7);  o.frequency.exponentialRampToValueAtTime(740, AC.currentTime+.12); o.stop(AC.currentTime+.22); }
-  function pop()  { if(!ensure()) return; const {o,g}=osc('sine', 180);   env(g, .004, .16, .65); o.frequency.exponentialRampToValueAtTime(260, AC.currentTime+.08); o.stop(AC.currentTime+.20); }
-  function woosh(){ if(!ensure()) return; const n=noise(); const bp=AC.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=280; bp.Q.value=.7; n.g.disconnect(); n.g.connect(bp).connect(master); env(n.g,.005,.24,.7); const t=now(); bp.frequency.linearRampToValueAtTime(1100, t+.24); }
-
+  function env(g,a=.005,r=.12,peak=1){ if(!g||!g.gain||!AC) return; const t=now(); g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+a); g.gain.exponentialRampToValueAtTime(.0001,t+a+r); }
+  function osc(type='sine', f=440){ const o=AC.createOscillator(); o.type=type; o.frequency.value=f; const g=AC.createGain(); g.gain.value=.0001; o.connect(g).connect(master); o.start(); return {o,g}; }
+  function noise(){ const b=AC.createBuffer(1, AC.sampleRate, AC.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*.9; const s=AC.createBufferSource(); s.buffer=b; const g=AC.createGain(); g.gain.value=.0001; s.connect(g).connect(master); s.start(); return {s,g}; }
+  function tap(){ if(!ensure())return; const {o,g}=osc('triangle',420); env(g,.002,.06,.5); o.stop(AC.currentTime+.12); }
+  function blip(){ if(!ensure())return; const {o,g}=osc('sine',650); env(g,.006,.16,.7); o.frequency.exponentialRampToValueAtTime(740, AC.currentTime+.12); o.stop(AC.currentTime+.22); }
+  function pop(){ if(!ensure())return; const {o,g}=osc('sine',180); env(g,.004,.16,.65); o.frequency.exponentialRampToValueAtTime(260, AC.currentTime+.08); o.stop(AC.currentTime+.2); }
+  function woosh(){ if(!ensure())return; const n=noise(); const bp=AC.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=280; bp.Q.value=.7; n.g.disconnect(); n.g.connect(bp).connect(master); env(n.g,.005,.24,.7); const t=now(); bp.frequency.linearRampToValueAtTime(1100, t+.24); }
   function resume(){ ensure(); }
-  return { tap, blip, pop, woosh, resume };
+  return {tap, blip, pop, woosh, resume};
 })();
 
 /* header date */
@@ -70,8 +42,7 @@ const SFX = (() => {
 /* theme (dark default) */
 (() => {
   const root=document.documentElement, fx=$('#themeFx');
-  applyTheme(localStorage.getItem('theme')||'dark', false);
-
+  apply(localStorage.getItem('theme')||'dark', false);
   bind('#btnThemeLogin','#themeLabelLogin','#icSunLogin','#icMoonLogin');
   bind('#btnTheme','#themeLabel','#icSun','#icMoon');
 
@@ -81,52 +52,49 @@ const SFX = (() => {
     reflect(root.dataset.theme);
     btn.addEventListener('click', ()=>{
       const next=root.dataset.theme==='dark'?'light':'dark';
-      applyTheme(next,true); reflect(next);
-      SFX.pop();
-    }, {passive:true});
+      apply(next,true); reflect(next); SFX.pop();
+    },{passive:true});
     function reflect(mode){
       if(label) label.textContent=`Tema: ${mode==='dark'?'Escuro':'Claro'}`;
-      if(sun&&moon){
-        const showSun=mode==='light';
-        sun.classList.toggle('hidden',!showSun);
-        moon.classList.toggle('hidden',showSun);
-      }
+      if(sun&&moon){ const showSun=mode==='light'; sun.classList.toggle('hidden',!showSun); moon.classList.toggle('hidden',showSun); }
     }
   }
-  function applyTheme(mode, animate){
-    root.dataset.theme=mode; localStorage.setItem('theme',mode);
-    if(animate){ fx.classList.add('on'); setTimeout(()=>fx.classList.remove('on'), 280); }
-    dispatchEvent(new CustomEvent('themechange',{detail:{mode}}));
-  }
+  function apply(mode, anim){ root.dataset.theme=mode; localStorage.setItem('theme',mode); if(anim){fx.classList.add('on'); setTimeout(()=>fx.classList.remove('on'),280);} dispatchEvent(new CustomEvent('themechange',{detail:{mode}})); }
 })();
 
-/* partículas (leve) */
+/* ===== partículas com auto-throttle por FPS ===== */
 (() => {
   const cv=$('#stars'); if(!cv) return; const ctx=cv.getContext('2d',{alpha:true});
   let W=0,H=0,P=[],topc,botc,fill,halo, frame=0;
-  function pal(){const cs=getComputedStyle(document.documentElement);
-    topc=cs.getPropertyValue('--sky-top').trim(); botc=cs.getPropertyValue('--sky-bot').trim();
-    fill=cs.getPropertyValue('--star-fill').trim(); halo=cs.getPropertyValue('--star-halo').trim();}
+  let frames=0, last=performance.now(), slow=0; // auto-throttle
+  function pal(){const cs=getComputedStyle(document.documentElement); topc=cs.getPropertyValue('--sky-top').trim(); botc=cs.getPropertyValue('--sky-bot').trim(); fill=cs.getPropertyValue('--star-fill').trim(); halo=cs.getPropertyValue('--star-halo').trim();}
   pal(); addEventListener('themechange',pal);
-  function resize(){W=cv.width=innerWidth; H=cv.height=innerHeight;
-    const density = isCoarse ? 10000 : 14000; // menos no mobile
-    const n=Math.min(200,Math.floor(W*H/density));
-    P=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.6+.4,vx:(Math.random()-.5)*.18,vy:-(Math.random()*.5+.08)}));}
+  function resize(){W=cv.width=innerWidth; H=cv.height=innerHeight; const density=isCoarse?10000:14000; const n=Math.min(200,Math.floor(W*H/density)); P=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.6+.4,vx:(Math.random()-.5)*.18,vy:-(Math.random()*.5+.08)}));}
   addEventListener('resize',resize,{passive:true}); resize();
-  (function draw(){
-    // pula frames no mobile pra economizar
-    if(isCoarse){ frame=(frame+1)%2; if(frame) { requestAnimationFrame(draw); return; } }
+  function drawStars(){
     ctx.clearRect(0,0,W,H);
     const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,topc); g.addColorStop(1,botc);
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    P.forEach(p=>{p.x+=p.vx; p.y+=p.vy; if(p.y<-10){p.y=H+10;p.x=Math.random()*W}
-      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle=fill; ctx.fill();
-      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*2,0,Math.PI*2); ctx.strokeStyle=halo; ctx.stroke();});
-    requestAnimationFrame(draw);
+    P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.y<-10){p.y=H+10;p.x=Math.random()*W}
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r*2,0,Math.PI*2);ctx.strokeStyle=halo;ctx.stroke();});
+  }
+  (function tick(){
+    frames++;
+    const now=performance.now();
+    if(now-last>1000){
+      const fps=frames*1000/(now-last);
+      frames=0; last=now;
+      slow = fps<45 ? Math.min(2, slow+1) : Math.max(0, slow-1);
+    }
+    // pula frames conforme "slow"
+    if(!slow || frame% (slow+1)===0) drawStars();
+    frame++;
+    requestAnimationFrame(tick);
   })();
 })();
 
-/* login (visual) */
+/* ===== login ===== */
 (() => {
   const screen=$('#screen-login'), app=$('#app');
   $('#btnSkip')?.addEventListener('click',()=>{ goHome(); SFX.pop(); },{passive:true});
@@ -135,13 +103,15 @@ const SFX = (() => {
   function goHome(){screen.classList.add('hidden'); app.classList.remove('hidden');}
 })();
 
-/* Modal genérico */
+/* ===== Modal “nasce do botão” (mobile) ===== */
 const Modal = (() => {
   const wrap = $('#appModal'); if(!wrap) return null;
   const title = $('#modalTitle'), body = $('#modalBody'), actions = $('#modalActions');
+  const card  = wrap.querySelector('.modal-card');
   $('#modalClose').addEventListener('click', close);
   wrap.querySelector('.modal-backdrop').addEventListener('click', close);
-  function open({title:t, html, buttons=[]}){
+
+  function open({title:t, html, buttons=[], anchor=null}){
     title.textContent = t || '—';
     body.innerHTML = html || '';
     actions.innerHTML = '';
@@ -152,135 +122,98 @@ const Modal = (() => {
       el.addEventListener('click', ()=>b.onClick?.(close), {passive:true});
       actions.appendChild(el);
     });
+
+    if (isCoarse && anchor) {
+      const r = anchor.getBoundingClientRect();
+      card.style.setProperty('--origin-x', `${r.left + r.width/2}px`);
+      card.style.setProperty('--origin-y', `${r.top  + r.height/2}px`);
+    } else {
+      card.style.removeProperty('--origin-x'); card.style.removeProperty('--origin-y');
+    }
+
     wrap.classList.remove('hidden');
-    setTimeout(()=>{ wrap.querySelector('input,textarea,button')?.focus(); }, 10);
+    requestAnimationFrame(()=>{ wrap.classList.add('show'); setTimeout(()=>{ wrap.querySelector('input,textarea,button')?.focus(); }, 10); });
     SFX.pop();
   }
-  function close(){ wrap.classList.add('hidden'); }
+  function close(){ wrap.classList.remove('show'); setTimeout(()=>wrap.classList.add('hidden'), isCoarse?220:0); }
   return { open, close, el:wrap };
 })();
 
-/* Ripple (mobile apenas) */
+/* ===== Ripple (só mobile) ===== */
 (() => {
-  if(!isCoarse) return; // ripple só no celular
+  if(!isCoarse) return;
   const selector = '.cta-btn,.dock-btn,.chip,.btn-primary,.btn-ghost,.composer button';
   document.addEventListener('pointerdown', e=>{
-    const btn = e.target.closest(selector);
-    if(!btn) return;
+    const btn = e.target.closest(selector); if(!btn) return;
     SFX.resume(); SFX.tap();
     const r = document.createElement('span'); r.className='ripple';
-    const rect = btn.getBoundingClientRect();
-    const d = Math.max(rect.width, rect.height);
-    r.style.width=r.style.height=d+'px';
-    r.style.left = (e.clientX-rect.left - d/2)+'px';
-    r.style.top  = (e.clientY-rect.top  - d/2)+'px';
-    btn.appendChild(r);
-    setTimeout(()=>r.remove(), 520);
+    const rect = btn.getBoundingClientRect(); const d = Math.max(rect.width, rect.height);
+    r.style.width=r.style.height=d+'px'; r.style.left=(e.clientX-rect.left-d/2)+'px'; r.style.top=(e.clientY-rect.top-d/2)+'px';
+    btn.appendChild(r); setTimeout(()=>r.remove(), 520);
   }, {passive:true});
 })();
 
-/* Tabs com animação + swipe (mobile forte / desktop suave) */
+/* ===== Tabs + swipe (já leve) ===== */
 (() => {
-  const dock = $('#dock');
-  const btns = $$('.dock-btn', dock);
+  const dock = $('#dock'); const btns = $$('.dock-btn', dock);
   const tabs = ['#tab-home','#tab-classroom','#tab-chat'];
-  let current = 0;
-  let navLock = false;      // evita spam de cliques
-  const NAV_MS = isCoarse ? 360 : 180;
+  let current = 0, navLock = false; const NAV_MS = isCoarse ? 360 : 180;
 
   function vibrate(ms=12){ if(isCoarse && navigator.vibrate) navigator.vibrate(ms); }
-  function toast(text){
-    if(!isCoarse) return; // toast só no mobile
-    const t = $('#toast'); if(!t) return;
-    t.textContent = text; t.classList.remove('hidden'); requestAnimationFrame(()=>t.classList.add('show'));
-    setTimeout(()=>{t.classList.remove('show'); setTimeout(()=>t.classList.add('hidden'),240);},800);
-  }
-
-  function clearAnim(el){
-    el?.classList.remove('slide-in-right','slide-in-left','fade-out');
-  }
+  function toast(text){ if(!isCoarse) return; const t=$('#toast'); if(!t) return; t.textContent=text; t.classList.remove('hidden'); requestAnimationFrame(()=>t.classList.add('show')); setTimeout(()=>{t.classList.remove('show'); setTimeout(()=>t.classList.add('hidden'),240);},800); }
+  const clearAnim = el => el?.classList.remove('slide-in-right','slide-in-left','fade-out');
 
   function activate(idx, dir='right'){
     if(idx===current || idx<0 || idx>=tabs.length || navLock) return;
     navLock = true;
-
-    const old = $(tabs[current]);
-    const next = $(tabs[idx]);
-
-    // limpa classes antigas antes de aplicar
+    const old=$(tabs[current]), next=$(tabs[idx]);
     clearAnim(old); clearAnim(next);
-
-    // desktop: só fade; mobile: slide + fade-out
-    if(isCoarse){
-      old && old.classList.add('fade-out');
-      next && next.classList.add('active', dir==='right'?'slide-in-right':'slide-in-left');
-    }else{
-      next && next.classList.add('active');
-      old && old.classList.remove('active');
-    }
-
-    // dock states + pulso (mobile)
-    btns.forEach((b,i)=>{
-      const on = i===idx;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-selected', on?'true':'false');
-      if(isCoarse && on){ b.classList.add('pulse'); setTimeout(()=>b.classList.remove('pulse'), 380); }
-    });
-
-    vibrate(10);
-    SFX.woosh();
-    toast(btns[idx].textContent.trim());
-
-    setTimeout(()=>{
-      old && old.classList.remove('active','fade-out');
-      if(isCoarse) next && next.classList.remove('slide-in-right','slide-in-left');
-      current = idx;
-      window.scrollTo({top:0,behavior:isCoarse?'smooth':'auto'});
-      navLock = false;
-    }, NAV_MS);
+    if(isCoarse){ old&&old.classList.add('fade-out'); next&&next.classList.add('active', dir==='right'?'slide-in-right':'slide-in-left'); }
+    else { next&&next.classList.add('active'); old&&old.classList.remove('active'); }
+    btns.forEach((b,i)=>{ const on=i===idx; b.classList.toggle('active',on); b.setAttribute('aria-selected',on?'true':'false'); if(isCoarse&&on){b.classList.add('pulse'); setTimeout(()=>b.classList.remove('pulse'),380);} });
+    vibrate(10); SFX.woosh(); toast(btns[idx].textContent.trim());
+    setTimeout(()=>{ old&&old.classList.remove('active','fade-out'); if(isCoarse) next&&next.classList.remove('slide-in-right','slide-in-left'); current=idx; window.scrollTo({top:0,behavior:isCoarse?'smooth':'auto'}); navLock=false; }, NAV_MS);
   }
 
   dock.addEventListener('click', e=>{
     const btn = e.target.closest('.dock-btn'); if(!btn) return;
     const idx = Number(btn.dataset.index ?? btns.indexOf(btn));
-    const dir = idx>current?'right':'left';
-    activate(idx, dir);
+    activate(idx, idx>current?'right':'left');
   }, {passive:true});
 
-  // Swipe (mobile)
   if(isCoarse){
     let sx=0, sy=0, dx=0, dy=0, tracking=false, startT=0;
-    const page = $('#page');
-
-    function onStart(e){
-      const t = e.touches ? e.touches[0] : e;
-      tracking = true; sx=t.clientX; sy=t.clientY; dx=0; dy=0; startT=performance.now();
-    }
-    function onMove(e){
-      if(!tracking) return;
-      const t = e.touches ? e.touches[0] : e;
-      dx = t.clientX - sx; dy = t.clientY - sy;
-      // bloqueia rolagem quando swipe horizontal domina
-      if(Math.abs(dx) > Math.abs(dy)*1.25) e.preventDefault();
-    }
-    function onEnd(){
-      if(!tracking) return; tracking=false;
-      const dt = performance.now()-startT;
-      const THRESH = 64; const FAST = 0.36;
-      const v = Math.abs(dx)/Math.max(dt,1);
-      if(Math.abs(dx) > THRESH || v>FAST){
-        if(dx<0) activate(current+1,'right');
-        else     activate(current-1,'left');
-      }
-    }
-
-    page.addEventListener('touchstart', onStart, {passive:true});
-    page.addEventListener('touchmove',  onMove,  {passive:false});
-    page.addEventListener('touchend',   onEnd,   {passive:true});
+    const page=$('#page');
+    page.addEventListener('touchstart',e=>{const t=e.touches[0]; tracking=true;sx=t.clientX;sy=t.clientY;dx=dy=0;startT=performance.now();},{passive:true});
+    page.addEventListener('touchmove', e=>{if(!tracking)return;const t=e.touches[0];dx=t.clientX-sx;dy=t.clientY-sy; if(Math.abs(dx)>Math.abs(dy)*1.25) e.preventDefault();},{passive:false});
+    page.addEventListener('touchend',  ()=>{if(!tracking)return;tracking=false;const dt=performance.now()-startT;const TH=64, FAST=.36;const v=Math.abs(dx)/Math.max(dt,1); if(Math.abs(dx)>TH||v>FAST){ activate(dx<0?current+1:current-1, dx<0?'right':'left'); }},{passive:true});
   }
 })();
 
-/* ==== HOME: comunicados + atividades ==== */
+/* ===== UX helpers ===== */
+function avatarHue(str){ let h=0; for(const c of str) h=(h*31 + c.charCodeAt(0))%360; return h; }
+function paintAvatars(){ $$('.avatar').forEach(av=>{ const name=(av.textContent||'').trim(); if(!name) return; const h=avatarHue(name); av.style.background=`conic-gradient(from 0deg, hsl(${h} 90% 60%), hsl(${(h+60)%360} 90% 60%))`; }); }
+paintAvatars();
+
+/* ===== IntersectionObserver para “hidratar” widgets só quando visíveis ===== */
+(() => {
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        if(e.target.id==='newsList') hydrateNews();
+        if(e.target.id==='taskList') hydrateTasks();
+        e.target.dataset.ready = 1; io.unobserve(e.target);
+      }
+    });
+  },{rootMargin:'200px'});
+
+  ['newsList','taskList'].forEach(id=>{ const el=$('#'+id); if(el) io.observe(el); });
+
+  function hydrateNews(){ /* já montamos dinamicamente no bloco HOME */ }
+  function hydrateTasks(){ /* idem */ }
+})();
+
+/* ===== HOME (com modais ancorados) ===== */
 (() => {
   const news = [
     { id:1, title:'Semana da Ciência', when:'Hoje • 10:00', desc:'Abertura no auditório. Tragam garrafinha d’água.' },
@@ -305,11 +238,12 @@ const Modal = (() => {
         <div class="actions"><button class="chip" data-open-news="${n.id}">Abrir</button></div>
       </li>`).join('');
   }
-  $('#btnAllNews')?.addEventListener('click',()=>{
+  $('#btnAllNews')?.addEventListener('click',e=>{
     Modal.open({
       title:'Todos os comunicados',
       html: news.map(n=>`<div class="list-item"><div><div class="title">${esc(n.title)}</div><div class="meta">${esc(n.when)}</div><div class="meta">${esc(n.desc)}</div></div></div>`).join(''),
-      buttons:[{label:'Fechar', onClick:(c)=>c()}]
+      buttons:[{label:'Fechar', onClick:(c)=>c()}],
+      anchor:e.currentTarget
     });
   });
   newsList?.addEventListener('click',e=>{
@@ -318,16 +252,16 @@ const Modal = (() => {
     Modal.open({
       title:n.title,
       html:`<p class="meta">${esc(n.when)}</p><p style="margin-top:6px">${esc(n.desc)}</p>`,
-      buttons:[{label:'Fechar', onClick:(c)=>c()}]
+      buttons:[{label:'Fechar', onClick:(c)=>c()}],
+      anchor:e.target
     });
   });
 
-  const TASK_KEY='chalkrise_tasks_student';
-  let state = loadTasks() || tasks;
-  const tList = $('#taskList');
-  renderTasks();
+  const KEY='chalkrise_tasks_student';
+  let state = load() || tasks;
+  const tList = $('#taskList'); render();
 
-  $('#btnAllTasks')?.addEventListener('click',()=>{
+  $('#btnAllTasks')?.addEventListener('click',e=>{
     Modal.open({
       title:'Minhas atividades',
       html: state.map(t=>`
@@ -340,21 +274,22 @@ const Modal = (() => {
             <button class="chip" data-toggle-task="${t.id}">${t.done?'Desmarcar':'Marcar entregue'}</button>
           </div>
         </div>`).join(''),
-      buttons:[{label:'Fechar', onClick:(c)=>c()}]
+      buttons:[{label:'Fechar', onClick:(c)=>c()}],
+      anchor:e.currentTarget
     });
-    $('#modalBody').addEventListener('click',e=>{
-      const id=e.target?.dataset?.toggleTask; if(!id) return;
-      toggleTask(Number(id)); renderTasks();
+    $('#modalBody').addEventListener('click',ev=>{
+      const id=ev.target?.dataset?.toggleTask; if(!id) return;
+      toggle(Number(id)); render();
       $('#modalClose').click(); $('#btnAllTasks').click();
     },{once:true});
   });
 
   tList?.addEventListener('click',e=>{
     const id=e.target?.dataset?.toggleTask; if(!id) return;
-    toggleTask(Number(id)); renderTasks();
+    toggle(Number(id)); render();
   });
 
-  function renderTasks(){
+  function render(){
     if(!tList) return;
     tList.innerHTML = state.map(t=>`
       <li class="list-item pop">
@@ -366,14 +301,14 @@ const Modal = (() => {
           <button class="chip" data-toggle-task="${t.id}">${t.done?'Entregue ✅':'Marcar entregue'}</button>
         </div>
       </li>`).join('');
-    saveTasks();
+    save();
   }
-  function toggleTask(id){ const it=state.find(x=>x.id===id); if(it){ it.done=!it.done; saveTasks(); if(isCoarse) SFX.tap(); } }
-  function saveTasks(){ localStorage.setItem(TASK_KEY, JSON.stringify(state)); }
-  function loadTasks(){ try{ return JSON.parse(localStorage.getItem(TASK_KEY)||'[]'); }catch{ return null; } }
+  function toggle(id){ const it=state.find(x=>x.id===id); if(it){ it.done=!it.done; save(); if(isCoarse) SFX.tap(); } }
+  function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+  function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch{ return null; } }
 })();
 
-/* ==== Classroom (visual) ==== */
+/* ===== Classroom (chat visual) ===== */
 (() => {
   const list=$('#classroom-list'), chat=$('#classroom-chat'), tName=$('#teacherName'), tShort=$('#teacherShort'), back=$('#btnBackClassroom');
   const stream=$('#classroomStream'), input=$('#classroomInput'), send=$('#btnClassroomSend');
@@ -405,7 +340,7 @@ const Modal = (() => {
   input?.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault(); send?.click();}});
 })();
 
-/* ==== Chat IA (lista + modal) ==== */
+/* ===== Chat IA (lista + modais ancorados) ===== */
 (() => {
   const listEl=$('#chatList'), stream=$('#chatStream'), input=$('#chatInput'), send=$('#btnSend');
   const newBtn=$('#btnNewChat'), renBtn=$('#btnRenameChat'), delBtn=$('#btnDeleteChat');
@@ -418,7 +353,7 @@ const Modal = (() => {
 
   renderList(); openCurrent();
 
-  newBtn?.addEventListener('click', ()=>{
+  newBtn?.addEventListener('click', (e)=>{
     Modal.open({
       title:'Novo chat',
       html:`<label>Nome do chat</label><input id="newChatName" class="modal-input" placeholder="Ex: Dúvidas de Matemática" />`,
@@ -430,11 +365,12 @@ const Modal = (() => {
           const chat = { id, name, created: Date.now(), msgs:[{who:'ai', html:'<h4>Chalkrise IA</h4><p>Oi! Chat criado. Bora começar? ✨</p>'}]};
           chats.unshift(chat); currentId=id; save(); renderList(); openCurrent(); Modal.close(); SFX.pop();
         }}
-      ]
+      ],
+      anchor:e.currentTarget
     });
   });
 
-  renBtn?.addEventListener('click', ()=>{
+  renBtn?.addEventListener('click', (e)=>{
     const c = chats.find(x=>x.id===currentId); if(!c) return;
     Modal.open({
       title:'Renomear chat',
@@ -445,11 +381,12 @@ const Modal = (() => {
           const name = $('#renameChatName', Modal.el).value.trim(); if(!name) return;
           c.name = name; save(); renderList(); openCurrent(false); Modal.close(); SFX.pop();
         }}
-      ]
+      ],
+      anchor:e.currentTarget
     });
   });
 
-  delBtn?.addEventListener('click', ()=>{
+  delBtn?.addEventListener('click', (e)=>{
     const c = chats.find(x=>x.id===currentId); if(!c) return;
     Modal.open({
       title:'Excluir chat',
@@ -460,15 +397,15 @@ const Modal = (() => {
           chats = chats.filter(x=>x.id!==c.id);
           currentId = chats[0]?.id || null; save(); renderList(); openCurrent(); Modal.close(); SFX.pop();
         }}
-      ]
+      ],
+      anchor:e.currentTarget
     });
   });
 
   send?.addEventListener('click', ()=>{
     const t = (input?.value||'').trim(); if(!t || !currentId) return;
     push('me', `<p>${esc(t)}</p>`); input.value='';
-    const hold = typing();
-    setTimeout(()=>{ hold.remove(); push('ai','<h4>Chalkrise IA</h4><p>(visual) resposta fake 😄</p>'); }, 560);
+    const hold = typing(); setTimeout(()=>{ hold.remove(); push('ai','<h4>Chalkrise IA</h4><p>(visual) resposta fake 😄</p>'); }, 560);
   });
   input?.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault(); send?.click();}});
 
